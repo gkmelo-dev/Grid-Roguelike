@@ -11,6 +11,7 @@ extends Node
 @export var entity_pattern: GridEntityPattern.PatternType = GridEntityPattern.PatternType.SINGLE
 @export var use_pattern: bool = true  # If true, use pattern instead of entity_size
 var pattern: GridEntityPattern
+var pattern_rotation: int = 0  # Track rotation state (0, 1, 2, 3 for 0°, 90°, 180°, 270°)
 
 # References
 var parent_entity: Node2D  # The entity this component belongs to
@@ -50,7 +51,37 @@ func get_pixel_position() -> Vector2:
 
 func _update_pixel_position() -> void:
 	if parent_entity:
+		# Set entity position to grid position
 		parent_entity.position = get_pixel_position()
+		
+		# Update sprite position to be centered on the pattern
+		_update_sprite_position()
+
+func _update_sprite_position() -> void:
+	if not parent_entity or not pattern:
+		return
+	
+	# Find the sprite component
+	var sprite: Sprite2D = null
+	if parent_entity.has_method("get_sprite_component") and parent_entity.get_sprite_component():
+		sprite = parent_entity.get_sprite_component()
+	else:
+		# Try to find Sprite2D node
+		sprite = parent_entity.get_node("Sprite2D") if parent_entity.has_node("Sprite2D") else null
+	
+	if sprite:
+		# Calculate pattern center offset
+		var pattern_center = pattern.get_pattern_center()
+		var center_offset = Vector2(
+			pattern_center.x * cell_size.x + cell_size.x * 0.5,
+			pattern_center.y * cell_size.y  # Sprite at top of center cell (half tile up from center)
+		)
+		
+		# Position sprite at pattern center (moved up by half tile)
+		sprite.position = center_offset
+		
+		# Apply rotation based on pattern rotation
+		sprite.rotation_degrees = pattern_rotation * 90.0
 
 # Size management - derived from pattern
 func get_entity_size() -> Vector2i:
@@ -171,6 +202,7 @@ func set_pattern(new_pattern: GridEntityPattern) -> void:
 	# Update the pattern resource
 	pattern = new_pattern
 	use_pattern = pattern != null
+	pattern_rotation = 0  # Reset rotation when setting new pattern
 	
 	# Update the enum for editor compatibility (optional)
 	# Note: This assumes the new_pattern has a way to identify its type
@@ -181,19 +213,40 @@ func set_pattern(new_pattern: GridEntityPattern) -> void:
 	if old_size != new_size:
 		size_changed.emit(old_size, new_size)
 	
+	# Update sprite position and rotation
+	_update_sprite_position()
+	
 	Logger.debug("Pattern set: %s" % (pattern.pattern_name if pattern else "None"), "GridComponent")
 
 func set_pattern_type(pattern_type: GridEntityPattern.PatternType) -> void:
 	entity_pattern = pattern_type
 	pattern = GridEntityPattern.create_pattern(pattern_type)
 	use_pattern = true
+	pattern_rotation = 0  # Reset rotation
+	_update_sprite_position()
 	Logger.debug("Pattern type set: %s" % pattern.pattern_name, "GridComponent")
+
+func rotate_pattern() -> void:
+	if not pattern or not pattern.can_rotate:
+		return
+	
+	# Rotate the pattern
+	pattern = pattern.rotate_clockwise()
+	pattern_rotation = (pattern_rotation + 1) % 4
+	
+	# Update sprite position and rotation
+	_update_sprite_position()
+	
+	Logger.debug("Pattern rotated to %d degrees" % (pattern_rotation * 90), "GridComponent")
 
 func get_pattern() -> GridEntityPattern:
 	return pattern
 
 func get_pattern_type() -> GridEntityPattern.PatternType:
 	return entity_pattern
+
+func get_rotation() -> int:
+	return pattern_rotation
 
 func is_using_pattern() -> bool:
 	return use_pattern and pattern != null
@@ -211,5 +264,6 @@ func get_debug_info() -> Dictionary:
 		"bounds": get_bounds(),
 		"pattern_name": pattern.pattern_name if pattern else "None",
 		"pattern_type": entity_pattern,
+		"pattern_rotation": pattern_rotation,
 		"use_pattern": use_pattern
 	} 

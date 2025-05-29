@@ -135,11 +135,9 @@ func _handle_left_click_released(cell_pos: Vector2i) -> void:
 
 func _handle_right_click(cell_pos: Vector2i) -> void:
 	if dragging_entity and dragging_entity.grid_component and dragging_entity.grid_component.get_pattern().can_rotate:
-		# Rotate dragging entity
-		var current_pattern = dragging_entity.grid_component.get_pattern()
-		var rotated_pattern = current_pattern.rotate_clockwise()
-		dragging_entity.grid_component.set_pattern(rotated_pattern)
-		preview_pattern = rotated_pattern
+		# Rotate dragging entity using GridComponent's method
+		dragging_entity.grid_component.rotate_pattern()
+		preview_pattern = dragging_entity.grid_component.get_pattern()
 		_update_preview()
 		Logger.debug("Rotated entity pattern", "Grid")
 

@@ -138,6 +138,9 @@ func has_sprite_component() -> bool:
 func has_grid_component() -> bool:
 	return grid_component != null
 
+func get_sprite_component() -> Sprite2D:
+	return sprite_component
+
 # Debug information
 func get_debug_info() -> Dictionary:
 	var base_info: Dictionary = {

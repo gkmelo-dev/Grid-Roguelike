@@ -11,4 +11,4 @@ script = ExtResource("1_optlg")
 texture = ExtResource("2_o1slg")
 
 [node name="GridComponent" parent="." instance=ExtResource("3_hyp4s")]
-entity_pattern = 2
+entity_pattern = 4
