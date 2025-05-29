@@ -14,6 +14,7 @@ var sunflower_scene: PackedScene = preload("res://src/scenes/entities/entities/S
 # Selection state
 var selected_entity_scene: PackedScene = null
 var selected_entity_pattern: GridEntityPattern = null
+var selected_pattern_rotation: int = 0  # Track rotation for preview
 
 # Signals
 signal entity_selected(entity_scene: PackedScene, pattern: GridEntityPattern)
@@ -48,6 +49,7 @@ func _on_sunflower_button_pressed() -> void:
 	if sunflower_button.button_pressed:
 		# Select Sunflower
 		selected_entity_scene = sunflower_scene
+		selected_pattern_rotation = 0  # Reset rotation when selecting
 		
 		# Instead of forcing a SINGLE pattern, let the entity use its own configured pattern
 		# We'll set this to null and let the Grid system use the entity's own pattern
@@ -71,9 +73,9 @@ func _on_sunflower_button_pressed() -> void:
 			# Fallback to SINGLE
 			selected_entity_pattern = GridEntityPattern.create_pattern(GridEntityPattern.PatternType.SINGLE)
 		
-		# Tell grid to show preview
+		# Tell grid to show preview with current rotation
 		if grid:
-			grid.set_placement_mode(true, selected_entity_pattern)
+			grid.set_placement_mode(true, _get_rotated_pattern())
 		
 		entity_selected.emit(selected_entity_scene, selected_entity_pattern)
 		Logger.info("Sunflower selected for placement", "GameHUD")
@@ -109,10 +111,17 @@ func _place_entity_at(position: Vector2i) -> void:
 	# Debug: Check grid bounds
 	Logger.info("Trying to place entity at (%d, %d), Grid bounds: %s" % [position.x, position.y, grid.get_grid_bounds()], "GameHUD")
 	
-	# Create entity
-	var entity = grid.add_entity_to_grid(selected_entity_scene, selected_entity_pattern)
+	# Create entity with the rotated pattern
+	var entity = grid.add_entity_to_grid(selected_entity_scene, _get_rotated_pattern())
 	
 	if entity:
+		# Apply rotation to the entity if it was rotated
+		if entity.grid_component and selected_pattern_rotation > 0:
+			# Set the pattern rotation for proper sprite positioning
+			entity.grid_component.pattern_rotation = selected_pattern_rotation
+			# Update sprite position and rotation
+			entity.grid_component._update_sprite_position()
+		
 		# Debug: Check entity setup
 		Logger.info("Created entity: %s" % entity.name, "GameHUD")
 		Logger.info("Entity has grid_component: %s" % (entity.grid_component != null), "GameHUD")
@@ -128,8 +137,8 @@ func _place_entity_at(position: Vector2i) -> void:
 			var occupied_cells = entity.grid_component.get_occupied_cells()
 			Logger.info("Entity will occupy cells: %s when placed at (%d, %d)" % [str(occupied_cells), position.x, position.y], "GameHUD")
 		
-		# Debug: Check placement validation
-		var can_place = grid.can_place_pattern_at(selected_entity_pattern, position)
+		# Debug: Check placement validation with rotated pattern
+		var can_place = grid.can_place_pattern_at(_get_rotated_pattern(), position)
 		Logger.info("Can place pattern at (%d, %d): %s" % [position.x, position.y, can_place], "GameHUD")
 		
 		# Debug: Check if cell is occupied
@@ -164,3 +173,27 @@ func get_selected_entity_scene() -> PackedScene:
 
 func get_selected_pattern() -> GridEntityPattern:
 	return selected_entity_pattern 
+
+func _get_rotated_pattern() -> GridEntityPattern:
+	if not selected_entity_pattern:
+		return null
+	
+	var rotated_pattern = selected_entity_pattern
+	# Apply rotation the number of times needed
+	for i in range(selected_pattern_rotation):
+		rotated_pattern = rotated_pattern.rotate_clockwise()
+	
+	return rotated_pattern
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed:
+		match event.keycode:
+			KEY_R:
+				if selected_entity_scene and selected_entity_pattern:
+					# Rotate the selected pattern before placement
+					selected_pattern_rotation = (selected_pattern_rotation + 1) % 4
+					Logger.info("Rotated pattern to %d degrees" % (selected_pattern_rotation * 90), "GameHUD")
+					
+					# Update grid preview
+					if grid:
+						grid.set_placement_mode(true, _get_rotated_pattern()) 

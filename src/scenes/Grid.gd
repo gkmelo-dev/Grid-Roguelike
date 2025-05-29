@@ -104,6 +104,8 @@ func _input(event: InputEvent) -> void:
 		_handle_mouse_button(event)
 	elif event is InputEventMouseMotion:
 		_handle_mouse_motion(event)
+	elif event is InputEventKey and event.pressed:
+		_handle_keyboard_input(event)
 
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
 	var local_pos = to_local(event.position)
@@ -123,8 +125,14 @@ func _handle_left_click_pressed(cell_pos: Vector2i, world_pos: Vector2) -> void:
 	
 	var entity = get_entity_at_cell(cell_pos)
 	if entity:
-		# Start dragging existing entity
-		_start_dragging_entity(entity, world_pos)
+		# Check if entity can be dragged
+		if entity.grid_component and entity.grid_component.can_be_dragged():
+			# Start dragging existing entity
+			_start_dragging_entity(entity, world_pos)
+		else:
+			# Entity cannot be dragged
+			Logger.info("Entity %s cannot be dragged (can_drag = false)" % entity.name, "Grid")
+			cell_clicked.emit(cell_pos, entity)
 	else:
 		# Empty cell clicked
 		cell_clicked.emit(cell_pos, null)
@@ -133,7 +141,7 @@ func _handle_left_click_released(cell_pos: Vector2i) -> void:
 	if dragging_entity:
 		_finish_dragging(cell_pos)
 
-func _handle_right_click(cell_pos: Vector2i) -> void:
+func _handle_right_click(_cell_pos: Vector2i) -> void:
 	if dragging_entity and dragging_entity.grid_component and dragging_entity.grid_component.get_pattern().can_rotate:
 		# Rotate dragging entity using GridComponent's method
 		dragging_entity.grid_component.rotate_pattern()
@@ -403,3 +411,13 @@ func get_debug_info() -> Dictionary:
 		"dragging": dragging_entity != null,
 		"preview_valid": preview_valid if dragging_entity else false
 	}
+
+func _handle_keyboard_input(event: InputEventKey) -> void:
+	match event.keycode:
+		KEY_R:
+			# Rotate dragging entity
+			if dragging_entity and dragging_entity.grid_component and dragging_entity.grid_component.get_pattern().can_rotate:
+				dragging_entity.grid_component.rotate_pattern()
+				preview_pattern = dragging_entity.grid_component.get_pattern()
+				_update_preview()
+				Logger.debug("Rotated entity with R key", "Grid")

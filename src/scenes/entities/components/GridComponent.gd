@@ -10,6 +10,7 @@ extends Node
 # Pattern support for complex shapes
 @export var entity_pattern: GridEntityPattern.PatternType = GridEntityPattern.PatternType.SINGLE
 @export var use_pattern: bool = true  # If true, use pattern instead of entity_size
+@export var can_drag: bool = false  # If true, entity can be dragged after placement
 var pattern: GridEntityPattern
 var pattern_rotation: int = 0  # Track rotation state (0, 1, 2, 3 for 0°, 90°, 180°, 270°)
 
@@ -248,6 +249,12 @@ func get_pattern_type() -> GridEntityPattern.PatternType:
 func get_rotation() -> int:
 	return pattern_rotation
 
+func can_be_dragged() -> bool:
+	return can_drag
+
+func set_can_drag(value: bool) -> void:
+	can_drag = value
+
 func is_using_pattern() -> bool:
 	return use_pattern and pattern != null
 
@@ -265,5 +272,6 @@ func get_debug_info() -> Dictionary:
 		"pattern_name": pattern.pattern_name if pattern else "None",
 		"pattern_type": entity_pattern,
 		"pattern_rotation": pattern_rotation,
-		"use_pattern": use_pattern
+		"use_pattern": use_pattern,
+		"can_drag": can_drag
 	} 
