@@ -343,14 +343,16 @@ func add_entity_to_grid(entity_scene: PackedScene, pattern: GridEntityPattern = 
 	Logger.info("Created entity: %s" % entity.name, "Grid")
 	Logger.info("Entity has grid_component: %s" % (entity.grid_component != null), "Grid")
 	
-	# Set pattern if provided
+	# Set pattern if provided, otherwise keep the entity's own pattern
 	if pattern and entity.grid_component:
 		entity.grid_component.set_pattern(pattern)
 		Logger.info("Set pattern %s on entity" % pattern.pattern_name, "Grid")
 	elif pattern:
 		Logger.warning("Cannot set pattern - entity has no grid_component", "Grid")
 	elif entity.grid_component:
-		Logger.info("No pattern provided, entity will use default", "Grid")
+		# Entity already has its own pattern from scene configuration
+		var existing_pattern = entity.grid_component.get_pattern()
+		Logger.info("Entity using its own pattern: %s" % (existing_pattern.pattern_name if existing_pattern else "None"), "Grid")
 	
 	# Remove from scene tree - it will be re-added when placed
 	remove_child(entity)

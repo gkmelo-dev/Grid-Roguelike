@@ -48,7 +48,28 @@ func _on_sunflower_button_pressed() -> void:
 	if sunflower_button.button_pressed:
 		# Select Sunflower
 		selected_entity_scene = sunflower_scene
-		selected_entity_pattern = GridEntityPattern.create_pattern(GridEntityPattern.PatternType.SINGLE)
+		
+		# Instead of forcing a SINGLE pattern, let the entity use its own configured pattern
+		# We'll set this to null and let the Grid system use the entity's own pattern
+		selected_entity_pattern = null
+		
+		# For preview, we need to create a temporary entity to get its pattern
+		var temp_entity = sunflower_scene.instantiate() as Entity
+		if temp_entity:
+			# Add temporarily to get the pattern
+			add_child(temp_entity)
+			if temp_entity.grid_component and temp_entity.grid_component.get_pattern():
+				selected_entity_pattern = temp_entity.grid_component.get_pattern()
+				Logger.info("Using Sunflower's configured pattern: %s" % selected_entity_pattern.pattern_name, "GameHUD")
+			else:
+				# Fallback to SINGLE if no pattern found
+				selected_entity_pattern = GridEntityPattern.create_pattern(GridEntityPattern.PatternType.SINGLE)
+				Logger.warning("Sunflower has no pattern, using SINGLE as fallback", "GameHUD")
+			remove_child(temp_entity)
+			temp_entity.queue_free()
+		else:
+			# Fallback to SINGLE
+			selected_entity_pattern = GridEntityPattern.create_pattern(GridEntityPattern.PatternType.SINGLE)
 		
 		# Tell grid to show preview
 		if grid:
@@ -101,12 +122,27 @@ func _place_entity_at(position: Vector2i) -> void:
 			Logger.info("Entity pattern: %s" % (pattern.pattern_name if pattern else "None"), "GameHUD")
 			if pattern:
 				Logger.info("Pattern cells: %s" % str(pattern.pattern_cells), "GameHUD")
-
+				Logger.info("Pattern should occupy %d cells" % pattern.pattern_cells.size(), "GameHUD")
+			
+			# Debug: Check what cells will be occupied at this position
+			var occupied_cells = entity.grid_component.get_occupied_cells()
+			Logger.info("Entity will occupy cells: %s when placed at (%d, %d)" % [str(occupied_cells), position.x, position.y], "GameHUD")
+		
+		# Debug: Check placement validation
+		var can_place = grid.can_place_pattern_at(selected_entity_pattern, position)
+		Logger.info("Can place pattern at (%d, %d): %s" % [position.x, position.y, can_place], "GameHUD")
+		
 		# Debug: Check if cell is occupied
 		Logger.info("Cell (%d, %d) occupied: %s" % [position.x, position.y, grid.is_cell_occupied(position)], "GameHUD")
 		
 		if grid.place_entity(entity, position):
 			Logger.info("Entity placed at (%d, %d)" % [position.x, position.y], "GameHUD")
+			
+			# Debug: Verify what cells are actually occupied after placement
+			if entity.grid_component:
+				var final_occupied_cells = entity.grid_component.get_occupied_cells()
+				Logger.info("Entity now occupies cells: %s" % str(final_occupied_cells), "GameHUD")
+			
 			# Keep selection active for placing more entities
 		else:
 			# Failed to place - remove entity
