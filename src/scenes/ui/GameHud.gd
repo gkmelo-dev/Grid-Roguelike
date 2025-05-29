@@ -1,0 +1,112 @@
+extends Control
+
+# Game HUD - Handles entity selection and grid interaction
+
+# UI References
+@onready var sunflower_button: Button
+
+# Grid reference (to be set from Game scene)
+var grid: Node2D = null
+
+# Entity scenes
+var sunflower_scene: PackedScene = preload("res://src/scenes/entities/entities/Sunflower.tscn")
+
+# Selection state
+var selected_entity_scene: PackedScene = null
+var selected_entity_pattern: GridEntityPattern = null
+
+# Signals
+signal entity_selected(entity_scene: PackedScene, pattern: GridEntityPattern)
+signal entity_deselected()
+
+func _ready() -> void:
+	_setup_ui()
+	Logger.info("GameHud ready", "GameHUD")
+
+func _setup_ui() -> void:
+	# Create Sunflower selection button
+	sunflower_button = Button.new()
+	sunflower_button.text = "Sunflower"
+	sunflower_button.toggle_mode = true
+	sunflower_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sunflower_button.pressed.connect(_on_sunflower_button_pressed)
+	
+	# Position the button
+	sunflower_button.position = Vector2(10, 10)
+	sunflower_button.size = Vector2(100, 40)
+	
+	add_child(sunflower_button)
+
+func set_grid_reference(grid_node: Node2D) -> void:
+	grid = grid_node
+	if grid:
+		# Connect to grid signals
+		grid.cell_clicked.connect(_on_grid_cell_clicked)
+		Logger.info("GameHud connected to Grid", "GameHUD")
+
+func _on_sunflower_button_pressed() -> void:
+	if sunflower_button.button_pressed:
+		# Select Sunflower
+		selected_entity_scene = sunflower_scene
+		selected_entity_pattern = GridEntityPattern.create_pattern(GridEntityPattern.PatternType.SINGLE)
+		
+		# Tell grid to show preview
+		if grid:
+			grid.set_placement_mode(true, selected_entity_pattern)
+		
+		entity_selected.emit(selected_entity_scene, selected_entity_pattern)
+		Logger.info("Sunflower selected for placement", "GameHUD")
+	else:
+		# Deselect
+		_deselect_entity()
+
+func _deselect_entity() -> void:
+	selected_entity_scene = null
+	selected_entity_pattern = null
+	
+	# Tell grid to hide preview
+	if grid:
+		grid.set_placement_mode(false, null)
+	
+	entity_deselected.emit()
+	Logger.info("Entity deselected", "GameHUD")
+
+func _on_grid_cell_clicked(position: Vector2i, entity: Entity) -> void:
+	if entity:
+		# Clicked on existing entity - deselect for now
+		sunflower_button.button_pressed = false
+		_deselect_entity()
+	else:
+		# Clicked on empty cell - try to place selected entity
+		if selected_entity_scene and grid:
+			_place_entity_at(position)
+
+func _place_entity_at(position: Vector2i) -> void:
+	if not selected_entity_scene or not grid:
+		return
+	
+	# Create entity
+	var entity = grid.add_entity_to_grid(selected_entity_scene, selected_entity_pattern)
+	
+	if entity:
+		if grid.place_entity(entity, position):
+			Logger.info("Entity placed at (%d, %d)" % [position.x, position.y], "GameHUD")
+			# Keep selection active for placing more entities
+		else:
+			# Failed to place - remove entity
+			entity.queue_free()
+			Logger.warning("Cannot place entity at (%d, %d)" % [position.x, position.y], "GameHUD")
+
+# Public API
+func deselect_all() -> void:
+	sunflower_button.button_pressed = false
+	_deselect_entity()
+
+func is_entity_selected() -> bool:
+	return selected_entity_scene != null
+
+func get_selected_entity_scene() -> PackedScene:
+	return selected_entity_scene
+
+func get_selected_pattern() -> GridEntityPattern:
+	return selected_entity_pattern 

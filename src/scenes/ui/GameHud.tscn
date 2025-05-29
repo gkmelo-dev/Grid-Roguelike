@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://cbil4pue48et"]
+
+[ext_resource type="Script" uid="uid://dsd2kebkh1nj3" path="res://src/scenes/ui/GameHud.gd" id="1_3x8y9"]
+
+[node name="GameHud" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 618.0
+offset_bottom = 384.0
+script = ExtResource("1_3x8y9")

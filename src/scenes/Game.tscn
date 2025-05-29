@@ -1,7 +1,13 @@
-[gd_scene load_steps=2 format=3 uid="uid://cslmowbmwmeoe"]
+[gd_scene load_steps=4 format=3 uid="uid://cslmowbmwmeoe"]
 
-[ext_resource type="PackedScene" uid="uid://bt1dpwser8wsf" path="res://src/scenes/entities/entities/Sunflower.tscn" id="1_mmm3n"]
+[ext_resource type="Script" uid="uid://rxcwh5cufmi" path="res://src/scenes/Game.gd" id="1_k8v5l"]
+[ext_resource type="PackedScene" uid="uid://doa4xxlrhpp0p" path="res://src/scenes/Grid.tscn" id="2_mmm3n"]
+[ext_resource type="PackedScene" uid="uid://cbil4pue48et" path="res://src/scenes/ui/GameHud.tscn" id="3_7bdat"]
 
 [node name="Game" type="Node2D"]
+script = ExtResource("1_k8v5l")
 
-[node name="Sunflower" parent="." instance=ExtResource("1_mmm3n")]
+[node name="Grid" parent="." instance=ExtResource("2_mmm3n")]
+position = Vector2(128, 64)
+
+[node name="GameHud" parent="." instance=ExtResource("3_7bdat")]
