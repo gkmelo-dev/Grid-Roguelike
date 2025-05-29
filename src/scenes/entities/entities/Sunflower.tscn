@@ -1,0 +1,13 @@
+[gd_scene load_steps=4 format=3 uid="uid://bt1dpwser8wsf"]
+
+[ext_resource type="Script" uid="uid://c2o1i4cj6726f" path="res://src/scenes/entities/entities.gd" id="1_optlg"]
+[ext_resource type="Texture2D" uid="uid://d1p2airpyg685" path="res://src/assets/Sunflower/base.png" id="2_o1slg"]
+[ext_resource type="PackedScene" uid="uid://bv68t63s4hi72" path="res://src/scenes/entities/components/GridComponent.tscn" id="3_hyp4s"]
+
+[node name="Sunflower" type="Node2D"]
+script = ExtResource("1_optlg")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_o1slg")
+
+[node name="GridComponent" parent="." instance=ExtResource("3_hyp4s")]

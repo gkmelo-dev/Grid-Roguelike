@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://cslmowbmwmeoe"]
+
+[ext_resource type="PackedScene" uid="uid://bt1dpwser8wsf" path="res://src/scenes/entities/entities/Sunflower.tscn" id="1_mmm3n"]
+
+[node name="Game" type="Node2D"]
+
+[node name="Sunflower" parent="." instance=ExtResource("1_mmm3n")]
