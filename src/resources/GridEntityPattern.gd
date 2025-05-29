@@ -12,7 +12,9 @@ extends Resource
 enum PatternType {
 	SINGLE,      # 1x1 - single cell
 	SQUARE_2X2,  # 2x2 square
+	LINE_H2,     # 2x1 horizontal line
 	LINE_H3,     # 3x1 horizontal line
+	LINE_V2,     # 1x2 vertical line
 	LINE_V3,     # 1x3 vertical line
 	T_SHAPE,     # T-shaped pattern
 	L_SHAPE,     # L-shaped pattern
@@ -42,10 +44,24 @@ static func create_pattern(type: PatternType) -> GridEntityPattern:
 			]
 			pattern.can_rotate = false  # Square looks the same when rotated
 		
+		PatternType.LINE_H2:
+			pattern.pattern_name = "Line 2x1"
+			pattern.pattern_cells = [
+				Vector2i(0, 0), Vector2i(1, 0)
+			]
+			pattern.can_rotate = true
+		
 		PatternType.LINE_H3:
 			pattern.pattern_name = "Line 3x1"
 			pattern.pattern_cells = [
 				Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)
+			]
+			pattern.can_rotate = true
+		
+		PatternType.LINE_V2:
+			pattern.pattern_name = "Line 1x2"
+			pattern.pattern_cells = [
+				Vector2i(0, 0), Vector2i(0, 1)
 			]
 			pattern.can_rotate = true
 		

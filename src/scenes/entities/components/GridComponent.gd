@@ -8,8 +8,9 @@ extends Node
 @export var cell_size: Vector2 = GameConfig.DEFAULT_CELL_SIZE
 
 # Pattern support for complex shapes
-@export var entity_pattern: GridEntityPattern  # For L-shapes, T-shapes, etc.
-@export var use_pattern: bool = false  # If true, use pattern instead of entity_size
+@export var entity_pattern: GridEntityPattern.PatternType = GridEntityPattern.PatternType.SINGLE
+@export var use_pattern: bool = true  # If true, use pattern instead of entity_size
+var pattern: GridEntityPattern
 
 # References
 var parent_entity: Node2D  # The entity this component belongs to
@@ -24,13 +25,11 @@ func _ready() -> void:
 	if not parent_entity:
 		Logger.error("GridComponent must be a child of a Node2D", "GridComponent")
 	
-	# Ensure we have a pattern (default to single cell if none)
-	if not entity_pattern:
-		entity_pattern = GridEntityPattern.create_pattern(GridEntityPattern.PatternType.SINGLE)
-		use_pattern = true
-		Logger.debug("GridComponent: No pattern set, defaulting to SINGLE", "GridComponent")
+	# Create pattern from the enum type
+	pattern = GridEntityPattern.create_pattern(entity_pattern)
+	use_pattern = true
 	
-	Logger.debug("GridComponent ready for entity: %s" % parent_entity.name, "GridComponent")
+	Logger.debug("GridComponent ready for entity: %s with pattern: %s" % [parent_entity.name, pattern.pattern_name], "GridComponent")
 
 # Position management
 func get_grid_position() -> Vector2i:
@@ -55,8 +54,8 @@ func _update_pixel_position() -> void:
 
 # Size management - derived from pattern
 func get_entity_size() -> Vector2i:
-	if entity_pattern:
-		return entity_pattern.get_bounding_box().size
+	if pattern:
+		return pattern.get_bounding_box().size
 	else:
 		return Vector2i(1, 1)
 
@@ -66,33 +65,33 @@ func get_pixel_size() -> Vector2:
 
 # Grid cell calculations - uses pattern
 func get_occupied_cells() -> Array[Vector2i]:
-	if entity_pattern:
-		return entity_pattern.get_absolute_cells(grid_position)
+	if pattern:
+		return pattern.get_absolute_cells(grid_position)
 	else:
 		# Fallback for missing pattern
 		return [grid_position]
 
 func get_center_cell() -> Vector2i:
-	if entity_pattern:
-		var pattern_center: Vector2i = entity_pattern.get_pattern_center()
+	if pattern:
+		var pattern_center: Vector2i = pattern.get_pattern_center()
 		return grid_position + pattern_center
 	else:
 		return grid_position
 
 func get_bounds() -> Rect2i:
-	if entity_pattern:
-		var pattern_bounds: Rect2i = entity_pattern.get_bounding_box()
+	if pattern:
+		var pattern_bounds: Rect2i = pattern.get_bounding_box()
 		return Rect2i(grid_position + pattern_bounds.position, pattern_bounds.size)
 	else:
 		return Rect2i(grid_position, Vector2i(1, 1))
 
 # Grid placement validation
 func is_valid_grid_position(pos: Vector2i, grid_width: int, grid_height: int) -> bool:
-	if not entity_pattern:
+	if not pattern:
 		return pos.x >= 0 and pos.y >= 0 and pos.x < grid_width and pos.y < grid_height
 	
 	# Check if all pattern cells fit within grid bounds
-	var test_cells: Array[Vector2i] = entity_pattern.get_absolute_cells(pos)
+	var test_cells: Array[Vector2i] = pattern.get_absolute_cells(pos)
 	for cell: Vector2i in test_cells:
 		if cell.x < 0 or cell.y < 0 or cell.x >= grid_width or cell.y >= grid_height:
 			return false
@@ -166,22 +165,38 @@ func set_cell_size(new_cell_size: Vector2) -> void:
 	Logger.debug("Cell size updated to: %s" % cell_size, "GridComponent")
 
 # Pattern management
-func set_pattern(pattern: GridEntityPattern) -> void:
+func set_pattern(new_pattern: GridEntityPattern) -> void:
 	var old_size: Vector2i = get_entity_size()
-	entity_pattern = pattern
+	
+	# Update the pattern resource
+	pattern = new_pattern
 	use_pattern = pattern != null
+	
+	# Update the enum for editor compatibility (optional)
+	# Note: This assumes the new_pattern has a way to identify its type
+	# If GridEntityPattern doesn't have a pattern_type property, you might need to add it
+	
 	var new_size: Vector2i = get_entity_size()
 	
 	if old_size != new_size:
 		size_changed.emit(old_size, new_size)
 	
-	Logger.debug("Pattern set: %s" % pattern.pattern_name if pattern else "None", "GridComponent")
+	Logger.debug("Pattern set: %s" % (pattern.pattern_name if pattern else "None"), "GridComponent")
+
+func set_pattern_type(pattern_type: GridEntityPattern.PatternType) -> void:
+	entity_pattern = pattern_type
+	pattern = GridEntityPattern.create_pattern(pattern_type)
+	use_pattern = true
+	Logger.debug("Pattern type set: %s" % pattern.pattern_name, "GridComponent")
 
 func get_pattern() -> GridEntityPattern:
+	return pattern
+
+func get_pattern_type() -> GridEntityPattern.PatternType:
 	return entity_pattern
 
 func is_using_pattern() -> bool:
-	return use_pattern and entity_pattern != null
+	return use_pattern and pattern != null
 
 # Debug information
 func get_debug_info() -> Dictionary:
@@ -194,6 +209,7 @@ func get_debug_info() -> Dictionary:
 		"occupied_cells": get_occupied_cells(),
 		"center_cell": get_center_cell(),
 		"bounds": get_bounds(),
-		"pattern_name": entity_pattern.pattern_name if entity_pattern else "None",
+		"pattern_name": pattern.pattern_name if pattern else "None",
+		"pattern_type": entity_pattern,
 		"use_pattern": use_pattern
 	} 
