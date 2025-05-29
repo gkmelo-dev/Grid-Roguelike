@@ -115,11 +115,10 @@ func _place_entity_at(position: Vector2i) -> void:
 	var entity = grid.add_entity_to_grid(selected_entity_scene, _get_rotated_pattern())
 	
 	if entity:
-		# Apply rotation to the entity if it was rotated
-		if entity.grid_component and selected_pattern_rotation > 0:
-			# Set the pattern rotation for proper sprite positioning
+		# The entity already has the rotated pattern from _get_rotated_pattern()
+		# Transfer the rotation state for proper sprite positioning
+		if entity.grid_component:
 			entity.grid_component.pattern_rotation = selected_pattern_rotation
-			# Update sprite position and rotation
 			entity.grid_component._update_sprite_position()
 		
 		# Debug: Check entity setup

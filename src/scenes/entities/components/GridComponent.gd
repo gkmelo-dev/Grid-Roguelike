@@ -71,18 +71,35 @@ func _update_sprite_position() -> void:
 		sprite = parent_entity.get_node("Sprite2D") if parent_entity.has_node("Sprite2D") else null
 	
 	if sprite:
-		# Calculate pattern center offset
-		var pattern_center = pattern.get_pattern_center()
-		var center_offset = Vector2(
-			pattern_center.x * cell_size.x + cell_size.x * 0.5,
-			pattern_center.y * cell_size.y  # Sprite at top of center cell (half tile up from center)
-		)
+		# Calculate the actual center of the current pattern
+		var pattern_center = _calculate_pattern_visual_center()
 		
-		# Position sprite at pattern center (moved up by half tile)
-		sprite.position = center_offset
+		# Position sprite at the calculated center
+		sprite.position = pattern_center
 		
-		# Apply rotation based on pattern rotation
+		# Apply sprite rotation to match pattern rotation
 		sprite.rotation_degrees = pattern_rotation * 90.0
+
+func _calculate_pattern_visual_center() -> Vector2:
+	if not pattern or pattern.pattern_cells.is_empty():
+		return cell_size * 0.5  # Default to center of one cell
+	
+	# Calculate the actual bounding box center of the pattern
+	var bounds = pattern.get_bounding_box()
+	
+	# Calculate the center of the bounding box in grid coordinates
+	var center_grid = Vector2(
+		bounds.position.x + bounds.size.x * 0.5,
+		bounds.position.y + bounds.size.y * 0.5
+	)
+	
+	# Convert to pixel coordinates
+	var center_pixel = Vector2(
+		center_grid.x * cell_size.x,
+		center_grid.y * cell_size.y  # No more "half tile up" adjustment - use true center
+	)
+	
+	return center_pixel
 
 # Size management - derived from pattern
 func get_entity_size() -> Vector2i:
