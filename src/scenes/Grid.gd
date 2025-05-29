@@ -24,6 +24,8 @@ var preview_valid: bool = false
 # Placement mode state
 var placement_mode: bool = false
 var placement_pattern: GridEntityPattern = null
+var placement_entity_scene: PackedScene = null  # Entity scene for preview
+var preview_entity: Entity = null  # Visual preview entity with transparency
 
 # Signals
 signal entity_placed(entity: Entity, position: Vector2i)
@@ -51,7 +53,8 @@ func _draw() -> void:
 	
 	if dragging_entity and preview_pattern:
 		_draw_preview()
-	elif placement_mode and placement_pattern and preview_position != Vector2i(-1, -1):
+	elif placement_mode and placement_pattern and preview_position != Vector2i(-1, -1) and not preview_entity:
+		# Only draw border preview if we don't have an entity preview
 		_draw_placement_preview()
 
 func _draw_grid_lines() -> void:
@@ -163,6 +166,10 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 		if is_valid_cell(cell_pos):
 			preview_position = cell_pos
 			_update_placement_preview()
+			
+			# Update preview entity position and visibility
+			if preview_entity:
+				_update_preview_entity_position(cell_pos)
 	
 	queue_redraw()
 
@@ -318,7 +325,14 @@ func is_valid_cell(cell_pos: Vector2i) -> bool:
 func is_cell_occupied(cell_pos: Vector2i) -> bool:
 	if not is_valid_cell(cell_pos):
 		return true
-	return grid_cells[cell_pos.x][cell_pos.y] != null
+	
+	var entity_at_cell = grid_cells[cell_pos.x][cell_pos.y]
+	
+	# Ignore preview entity when checking for occupation
+	if entity_at_cell == preview_entity:
+		return false
+		
+	return entity_at_cell != null
 
 func get_entity_at_cell(cell_pos: Vector2i) -> Entity:
 	if not is_valid_cell(cell_pos):
@@ -366,16 +380,55 @@ func add_entity_to_grid(entity_scene: PackedScene, pattern: GridEntityPattern = 
 	# Entity will be positioned when placed
 	return entity
 
-func set_placement_mode(enabled: bool, pattern: GridEntityPattern = null) -> void:
-	placement_mode = enabled
-	placement_pattern = pattern
-	
-	if not enabled:
+func set_placement_mode(enabled: bool, pattern: GridEntityPattern = null, entity_scene: PackedScene = null) -> void:
+	if enabled and pattern and entity_scene:
+		# If already in placement mode, just update the pattern
+		if placement_mode and preview_entity:
+			update_preview_pattern(pattern)
+		else:
+			# Enable placement mode and create preview entity
+			placement_mode = enabled
+			placement_pattern = pattern
+			placement_entity_scene = entity_scene
+			_create_preview_entity()
+	else:
+		# Disable placement mode and clean up
+		placement_mode = enabled
+		placement_pattern = pattern
+		placement_entity_scene = entity_scene
+		_cleanup_preview_entity()
 		preview_position = Vector2i(-1, -1)
 		preview_valid = false
 	
 	queue_redraw()
 	Logger.debug("Placement mode: %s" % ("enabled" if enabled else "disabled"), "Grid")
+
+func update_preview_pattern(new_pattern: GridEntityPattern) -> void:
+	"""Update the preview entity's pattern without recreating it"""
+	if not preview_entity or not new_pattern:
+		return
+		
+	placement_pattern = new_pattern
+	
+	# Update the preview entity's pattern
+	if preview_entity.grid_component:
+		preview_entity.grid_component.set_pattern(new_pattern)
+		
+	# Update position to ensure proper sprite positioning with new pattern
+	if preview_position != Vector2i(-1, -1):
+		_update_preview_entity_position(preview_position)
+		
+	Logger.debug("Updated preview pattern to: %s" % new_pattern.pattern_name, "Grid")
+
+func update_preview_rotation(rotation: int) -> void:
+	"""Update the preview entity's rotation state for proper sprite positioning"""
+	if not preview_entity or not preview_entity.grid_component:
+		return
+		
+	preview_entity.grid_component.pattern_rotation = rotation
+	preview_entity.grid_component._update_sprite_position()
+	
+	Logger.debug("Updated preview rotation to: %d degrees" % (rotation * 90), "Grid")
 
 func is_in_placement_mode() -> bool:
 	return placement_mode
@@ -421,3 +474,63 @@ func _handle_keyboard_input(event: InputEventKey) -> void:
 				preview_pattern = dragging_entity.grid_component.get_pattern()
 				_update_preview()
 				Logger.debug("Rotated entity with R key", "Grid")
+
+func _update_preview_entity_position(cell_pos: Vector2i) -> void:
+	if not preview_entity:
+		return
+		
+	# Position the preview entity at the grid position
+	if preview_entity.grid_component:
+		preview_entity.grid_component.set_grid_position(cell_pos)
+	else:
+		preview_entity.position = grid_to_world(cell_pos)
+	
+	# Update preview entity visibility based on placement validity
+	var can_place = can_place_pattern_at(placement_pattern, cell_pos)
+	preview_entity.visible = true
+	
+	# Update preview entity opacity based on validity
+	_update_preview_entity_opacity(can_place)
+
+func _update_preview_entity_opacity(can_place: bool) -> void:
+	if not preview_entity:
+		return
+		
+	# Set transparency and color based on placement validity
+	if can_place:
+		# Valid placement: semi-transparent white
+		preview_entity.modulate = Color(1, 1, 1, 0.6)
+	else:
+		# Invalid placement: semi-transparent red
+		preview_entity.modulate = Color(1, 0.5, 0.5, 0.6)
+
+func _create_preview_entity() -> void:
+	if not placement_pattern or not placement_entity_scene:
+		return
+	
+	# Create a preview entity from the scene
+	preview_entity = placement_entity_scene.instantiate() as Entity
+	if not preview_entity:
+		Logger.error("Failed to create preview entity", "Grid")
+		return
+	
+	# Add to scene tree so components initialize
+	add_child(preview_entity)
+	
+	# Set up the preview entity
+	if preview_entity.grid_component:
+		preview_entity.grid_component.set_pattern(placement_pattern)
+	
+	# Make it semi-transparent and initially hidden
+	preview_entity.visible = false
+	preview_entity.modulate = Color(1, 1, 1, 0.6)
+	
+	Logger.debug("Created preview entity", "Grid")
+
+func _cleanup_preview_entity() -> void:
+	if preview_entity:
+		if preview_entity.get_parent() == self:
+			remove_child(preview_entity)
+		preview_entity.queue_free()
+		preview_entity = null
+		Logger.debug("Cleaned up preview entity", "Grid")

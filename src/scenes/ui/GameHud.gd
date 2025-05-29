@@ -75,7 +75,10 @@ func _on_sunflower_button_pressed() -> void:
 		
 		# Tell grid to show preview with current rotation
 		if grid:
-			grid.set_placement_mode(true, _get_rotated_pattern())
+			grid.set_placement_mode(true, _get_rotated_pattern(), selected_entity_scene)
+			# Set initial rotation if not zero
+			if selected_pattern_rotation > 0:
+				grid.update_preview_rotation(selected_pattern_rotation)
 		
 		entity_selected.emit(selected_entity_scene, selected_entity_pattern)
 		Logger.info("Sunflower selected for placement", "GameHUD")
@@ -89,7 +92,7 @@ func _deselect_entity() -> void:
 	
 	# Tell grid to hide preview
 	if grid:
-		grid.set_placement_mode(false, null)
+		grid.set_placement_mode(false, null, null)
 	
 	entity_deselected.emit()
 	Logger.info("Entity deselected", "GameHUD")
@@ -193,6 +196,7 @@ func _input(event: InputEvent) -> void:
 					selected_pattern_rotation = (selected_pattern_rotation + 1) % 4
 					Logger.info("Rotated pattern to %d degrees" % (selected_pattern_rotation * 90), "GameHUD")
 					
-					# Update grid preview
+					# Update grid preview with new pattern and rotation
 					if grid:
-						grid.set_placement_mode(true, _get_rotated_pattern()) 
+						grid.update_preview_pattern(_get_rotated_pattern())
+						grid.update_preview_rotation(selected_pattern_rotation) 
