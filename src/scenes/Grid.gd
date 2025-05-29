@@ -420,12 +420,12 @@ func update_preview_pattern(new_pattern: GridEntityPattern) -> void:
 		
 	Logger.debug("Updated preview pattern to: %s" % new_pattern.pattern_name, "Grid")
 
-func update_preview_rotation(rotation: int) -> void:
+func update_preview_rotation(new_rotation: int) -> void:
 	"""Update the preview entity's rotation state for proper sprite positioning"""
 	if not preview_entity or not preview_entity.grid_component:
 		return
 		
-	preview_entity.grid_component.pattern_rotation = rotation
+	preview_entity.grid_component.pattern_rotation = new_rotation
 	preview_entity.grid_component._update_sprite_position()
 	
 	Logger.debug("Updated preview rotation to: %d degrees" % (rotation * 90), "Grid")

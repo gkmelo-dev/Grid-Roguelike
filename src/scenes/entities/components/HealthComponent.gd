@@ -44,7 +44,6 @@ func take_damage(amount: int) -> bool:
 	if is_destroyed():
 		return false
 	
-	var old_health: int = current_health
 	var actual_damage: int = max(0, amount - defense_value)
 	current_health = max(0, current_health - actual_damage)
 	last_damage_time = Time.get_unix_time_from_system()
@@ -63,7 +62,6 @@ func heal(amount: int) -> bool:
 	if is_destroyed():
 		return false
 	
-	var old_health: int = current_health
 	current_health = min(max_health, current_health + amount)
 	
 	health_changed.emit(current_health, max_health)
