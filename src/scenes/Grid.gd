@@ -243,9 +243,11 @@ func _place_entity_at(entity: Entity, cell_pos: Vector2i) -> void:
 		if is_valid_cell(cell):
 			grid_cells[cell.x][cell.y] = entity
 	
-	# Add to entity list if not already there
+	# Add to entity list and scene tree if not already there
 	if entity not in placed_entities:
 		placed_entities.append(entity)
+	
+	if entity.get_parent() != self:
 		add_child(entity)
 
 func _can_place_entity_at(entity: Entity, cell_pos: Vector2i) -> bool:
@@ -257,13 +259,23 @@ func _can_place_entity_at(entity: Entity, cell_pos: Vector2i) -> bool:
 
 func can_place_pattern_at(pattern: GridEntityPattern, cell_pos: Vector2i) -> bool:
 	if not pattern:
+		Logger.warning("No pattern provided for placement validation", "Grid")
 		return false
 	
 	var cells = pattern.get_absolute_cells(cell_pos)
+	Logger.info("Checking placement at (%d, %d) for pattern %s with cells: %s" % [
+		cell_pos.x, cell_pos.y, pattern.pattern_name, str(cells)
+	], "Grid")
+	
 	for cell in cells:
-		if not is_valid_cell(cell) or is_cell_occupied(cell):
+		if not is_valid_cell(cell):
+			Logger.info("Cell (%d, %d) is outside grid bounds" % [cell.x, cell.y], "Grid")
+			return false
+		if is_cell_occupied(cell):
+			Logger.info("Cell (%d, %d) is already occupied" % [cell.x, cell.y], "Grid")
 			return false
 	
+	Logger.info("Placement validation passed for position (%d, %d)" % [cell_pos.x, cell_pos.y], "Grid")
 	return true
 
 func _remove_entity_from_grid(entity: Entity) -> void:
@@ -324,9 +336,24 @@ func add_entity_to_grid(entity_scene: PackedScene, pattern: GridEntityPattern = 
 		Logger.error("Failed to instantiate entity scene", "Grid")
 		return null
 	
+	# Add entity to scene tree temporarily so _ready() gets called and components are found
+	add_child(entity)
+	
+	# Now check if components are available
+	Logger.info("Created entity: %s" % entity.name, "Grid")
+	Logger.info("Entity has grid_component: %s" % (entity.grid_component != null), "Grid")
+	
 	# Set pattern if provided
 	if pattern and entity.grid_component:
 		entity.grid_component.set_pattern(pattern)
+		Logger.info("Set pattern %s on entity" % pattern.pattern_name, "Grid")
+	elif pattern:
+		Logger.warning("Cannot set pattern - entity has no grid_component", "Grid")
+	elif entity.grid_component:
+		Logger.info("No pattern provided, entity will use default", "Grid")
+	
+	# Remove from scene tree - it will be re-added when placed
+	remove_child(entity)
 	
 	# Entity will be positioned when placed
 	return entity

@@ -33,10 +33,25 @@ func _setup_entity() -> void:
 
 func _find_components() -> void:
 	# Try to find grid component
+	if not grid_component:
+		grid_component = get_node("GridComponent") if has_node("GridComponent") else null
+	
 	if grid_component:
-		Logger.debug("GridComponent found", "Entity")	
+		Logger.debug("GridComponent found", "Entity")
+	else:
+		Logger.warning("GridComponent not found for entity %s" % name, "Entity")
+	
+	# Try to find health component  
+	if not health_component:
+		health_component = get_node("HealthComponent") if has_node("HealthComponent") else null
+	
 	if health_component:
 		Logger.debug("HealthComponent found", "Entity")
+	
+	# Try to find sprite component
+	if not sprite_component:
+		sprite_component = get_node("Sprite2D") if has_node("Sprite2D") else null
+	
 	if sprite_component:
 		Logger.debug("Sprite2D found", "Entity")
 

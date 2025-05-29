@@ -85,10 +85,26 @@ func _place_entity_at(position: Vector2i) -> void:
 	if not selected_entity_scene or not grid:
 		return
 	
+	# Debug: Check grid bounds
+	Logger.info("Trying to place entity at (%d, %d), Grid bounds: %s" % [position.x, position.y, grid.get_grid_bounds()], "GameHUD")
+	
 	# Create entity
 	var entity = grid.add_entity_to_grid(selected_entity_scene, selected_entity_pattern)
 	
 	if entity:
+		# Debug: Check entity setup
+		Logger.info("Created entity: %s" % entity.name, "GameHUD")
+		Logger.info("Entity has grid_component: %s" % (entity.grid_component != null), "GameHUD")
+		
+		if entity.grid_component:
+			var pattern = entity.grid_component.get_pattern()
+			Logger.info("Entity pattern: %s" % (pattern.pattern_name if pattern else "None"), "GameHUD")
+			if pattern:
+				Logger.info("Pattern cells: %s" % str(pattern.pattern_cells), "GameHUD")
+
+		# Debug: Check if cell is occupied
+		Logger.info("Cell (%d, %d) occupied: %s" % [position.x, position.y, grid.is_cell_occupied(position)], "GameHUD")
+		
 		if grid.place_entity(entity, position):
 			Logger.info("Entity placed at (%d, %d)" % [position.x, position.y], "GameHUD")
 			# Keep selection active for placing more entities
@@ -96,6 +112,8 @@ func _place_entity_at(position: Vector2i) -> void:
 			# Failed to place - remove entity
 			entity.queue_free()
 			Logger.warning("Cannot place entity at (%d, %d)" % [position.x, position.y], "GameHUD")
+	else:
+		Logger.error("Failed to create entity", "GameHUD")
 
 # Public API
 func deselect_all() -> void:
